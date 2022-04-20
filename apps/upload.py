@@ -1,97 +1,134 @@
 import os
 import geopandas as gpd
 import streamlit as st
+import streamlit as st
+import pickle
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression
 
+# def save_uploaded_file(file_content, file_name):
+#     """
+#     Save the uploaded file to a temporary directory
+#     """
+#     import tempfile
+#     import os
+#     import uuid
 
-def save_uploaded_file(file_content, file_name):
-    """
-    Save the uploaded file to a temporary directory
-    """
-    import tempfile
-    import os
-    import uuid
+#     _, file_extension = os.path.splitext(file_name)
+#     file_id = str(uuid.uuid4())
+#     file_path = os.path.join(tempfile.gettempdir(), f"{file_id}{file_extension}")
 
-    _, file_extension = os.path.splitext(file_name)
-    file_id = str(uuid.uuid4())
-    file_path = os.path.join(tempfile.gettempdir(), f"{file_id}{file_extension}")
+#     with open(file_path, "wb") as file:
+#         file.write(file_content.getbuffer())
 
-    with open(file_path, "wb") as file:
-        file.write(file_content.getbuffer())
+#     return file_path
 
-    return file_path
-
+# loading the trained model
+model = pickle.load(open('PickleModel.pkl','rb'))
 
 def app():
+    st.title("Enter Patient Data")
+    age = st.number_input('Please enter your age here: ')
+    sex = st.selectbox(
+     'Please select your sex here: ',
+     ('Male', 'Female'))
+    if sex == 'male':
+        sex = 1
+    else:
+        sex = 0
+        
+    cp = st.selectbox(
+     'Select your chest pain type here: ',
+     ('Typical Angina', 'Atypical Angina', 'Non-anginal Pain', 'Asymptomatic'))
+    if cp == 'Typical Angina':
+        cp = 0
+    elif cp == "Atypical Angina":
+        cp = 1
+    elif cp == "Non-anginal Pain":
+        cp = 2
+    else:
+        cp = 3
+        
+    trestbps = st.number_input('Please enter your resting blood pressure (in mm Hg on admission to the hospital): ')
+    chol = st.number_input('Please enter serum cholestoral in mg/dl: ')
+    fbs = st.selectbox(
+     'Please select your fasting blood sugar > 120 mg/dl: ',
+     ('True', 'False'))
+    if fbs == "True":
+        fbs = 1
+    else:
+        fbs = 0
+    restecg = st.selectbox(
+     'Please select your resting electrocardiographic results: ',
+     ('Normal', 'Having ST-T wave abnormality (T wave inversions and/or ST elevation or depression of > 0.05 mV)', 'Showing probable or definite left ventricular hypertrophy by Estes criteria'))
+    if restecg == "Normal":
+        restecg = 0
+    elif restecg == "Having ST-T wave abnormality (T wave inversions and/or ST elevation or depression of > 0.05 mV)":
+        restecg = 1
+    else:
+        restecg = 2
+      
+    thalach = st.number_input('Please enter your maximum heart rate achieved: ')
+    exang = st.selectbox(
+     'Please select your exercise induced angina: ',
+     ('Yes', 'No'))
+    if exang == "Yes":
+        exang = 1
+    else:
+        exang = 0
+    oldpeak = st.number_input('Please enter ST depression induced by exercise relative to rest: ')
+    slope = st.selectbox(
+     'Please select the slope of the peak exercise ST segment: ',
+     ('Upsloping', 'Flat', 'Downsloping'))
+    if slope == "Upsloping":
+       slope = 0
+    elif slope == "Flat":
+       slope = 1
+    else:
+       slope = 2
+    ca = st.number_input('Please enter your number of major vessels (0-3) colored by flourosopy: ')
+    thal = st.selectbox(
+     'Please select the slope of the peak exercise ST segment: ',
+     ('Normal', 'Fixed defect', 'Reversable defect'))
+    if thal == "Normal":
+       thal = 0
+    elif thal == "Fixed defect":
+       thal = 1
+    else:
+       thal = 2
+    attributes = [age, sex, cp, trestbps, chol, fbs, restecg, thalach,
+       exang, oldpeak, slope, ca, thal]
+     
+    attributes = np.array(attributes)
+    attributes = np.array([attributes])
+#     mean = attributes.mean(axis=0)
+#     attributes -= mean
+#     std = attributes.std(axis=0)
+#     attributes /= std
+#     st.write(attributes)
+    
+    result = ""
+#     #
+    if st.button("Predict"):
+#       arr = dataframe.columns
 
-    st.title("Upload Vector Data")
+#       for i in arr:
+#           notnull = dataframe[i][dataframe[i].notnull()]
+#           min = notnull.min()
+#           dataframe[i].replace(np.nan, min, inplace=True)
 
-    row1_col1, row1_col2 = st.columns([2, 1])
-    width = 950
-    height = 600
+#       scaler = StandardScaler()
+#       scaler.fit(dataframe)
+#       featureshost = scaler.transform(dataframe)
+      prediction = np.round(model.predict(attributes)).astype(int)
 
-    with row1_col2:
-
-        backend = st.selectbox(
-            "Select a plotting backend", ["folium", "kepler.gl", "pydeck"], index=2
-        )
-
-        if backend == "folium":
-            import leafmap.foliumap as leafmap
-        elif backend == "kepler.gl":
-            import leafmap.kepler as leafmap
-        elif backend == "pydeck":
-            import leafmap.deck as leafmap
-
-        url = st.text_input(
-            "Enter a URL to a vector dataset",
-            "https://github.com/giswqs/streamlit-geospatial/raw/master/data/us_states.geojson",
-        )
-
-        data = st.file_uploader(
-            "Upload a vector dataset", type=["geojson", "kml", "zip", "tab"]
-        )
-
-        container = st.container()
-
-        if data or url:
-            if data:
-                file_path = save_uploaded_file(data, data.name)
-                layer_name = os.path.splitext(data.name)[0]
-            elif url:
-                file_path = url
-                layer_name = url.split("/")[-1].split(".")[0]
-
-            with row1_col1:
-                if file_path.lower().endswith(".kml"):
-                    gpd.io.file.fiona.drvsupport.supported_drivers["KML"] = "rw"
-                    gdf = gpd.read_file(file_path, driver="KML")
-                else:
-                    gdf = gpd.read_file(file_path)
-                lon, lat = leafmap.gdf_centroid(gdf)
-                if backend == "pydeck":
-
-                    column_names = gdf.columns.values.tolist()
-                    random_column = None
-                    with container:
-                        random_color = st.checkbox("Apply random colors", True)
-                        if random_color:
-                            random_column = st.selectbox(
-                                "Select a column to apply random colors", column_names
-                            )
-
-                    m = leafmap.Map(center=(40, -100))
-                    # m = leafmap.Map(center=(lat, lon))
-                    m.add_gdf(gdf, random_color_column=random_column)
-                    st.pydeck_chart(m)
-
-                else:
-                    m = leafmap.Map(center=(lat, lon), draw_export=True)
-                    m.add_gdf(gdf, layer_name=layer_name)
-                    if backend == "folium":
-                        m.zoom_to_gdf(gdf)
-                    m.to_streamlit(width=width, height=height)
-
-        else:
-            with row1_col1:
-                m = leafmap.Map()
-                st.pydeck_chart(m)
+      result = prediction
+      if slope != 0:
+          if result == 0:
+            st.write("Your odds of having a cardiovascular disease at the moment are very low. Keep up your current lifestyle!")
+          else:
+            st.write("Your odds of having a cardiovascular disease right now are high, please visit your doctor for more information!")
+      else:
+        st.write("Your odds of having a cardiovascular disease right now are high, please visit your doctor for more information!")
