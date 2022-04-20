@@ -1,5 +1,3 @@
-geemap
-geopandas
 jupyter-server-proxy
 keplergl
 leafmap
